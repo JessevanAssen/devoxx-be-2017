@@ -1,0 +1,13 @@
+{
+	"short_name": "Devoxx BE 2017",
+	"name": "Devoxx BE 2017 Schedule",
+	"description": "Conference planner for Devoxx Belgium 2017",
+	"display": "standalone",
+	"theme_color": "#f5af33",
+	"start_url": "./",
+	"icons": [{
+		"src": "./devoxx.png",
+		"sizes": "144x144",
+		"type": "image/png"
+	}]
+}
