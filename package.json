@@ -1,0 +1,8 @@
+{
+  "name": "devoxxbe2017",
+  "version": "1.0.0",
+  "description": "Conference schedule manager for Devoxx BE 2017",
+  "author": "Jesse van Assen <jesse.v.assen@gmail.com>",
+  "license": "MIT",
+  "private": true
+}
