@@ -8,19 +8,7 @@
 	--size-secondary: 14px;
 }
 
-@font-face {
-	font-family: "Open Sans";
-	font-style: normal;
-	font-weight: 400;
-	src: local("Open Sans Regular"), local("OpenSans-Regular"), url("./fonts/OpenSans-Regular.ttf");
-}
 
-@font-face {
-	font-family: "Open Sans";
-	font-style: normal;
-	font-weight: 700;
-	src: local("Open Sans Bold"), local("OpenSans-Bold"), url("./fonts/OpenSans-Bold.ttf");
-}
 
 * {
 	margin: 0;
@@ -49,20 +37,6 @@ header {
 
 section.content {
 	padding-top: 60px;
-}
-
-h2 {
-	font-size: 22px;
-	margin: 16px 16px 8px;
-	color: rgba(0, 0, 0, .75);
-	font-weight: normal;
-}
-
-h3 {
-	font-size: 16px;
-	margin: 16px 16px 8px;
-	color: rgba(0, 0, 0, .54);
-	font-weight: normal;
 }
 
 .list {
