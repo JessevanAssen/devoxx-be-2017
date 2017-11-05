@@ -1,3 +1,4 @@
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const path = require("path");
 const webpack = require("webpack");
@@ -18,14 +19,14 @@ module.exports = {
 				test: /\.(png|jpg|gif|svg)$/,
 				loader: "file-loader",
 				options: {
-					name: "[name].[ext]?[hash]"
+					name: "[name].[ext]"
 				}
 			},
 			{
 				test: /\.(ttf)$/,
 				loader: "file-loader",
 				options: {
-					name: "[name].[ext]?[hash]"
+					name: "[name].[ext]"
 				}
 			}
 		]
@@ -49,7 +50,11 @@ module.exports = {
 			filename: "index.html",
 			template: "template.html",
 			inject: true
-		})
+		}),
+		new CopyWebpackPlugin([
+			{ from: "./service-worker.js" },
+			{ from: "./manifest.json" }
+		])
 	]
 };
 
