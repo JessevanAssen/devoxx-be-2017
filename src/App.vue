@@ -2,14 +2,14 @@
 	<div v-cloak>
 		<header>Devoxx BE 2017</header>
 		<section class="content">
-			<div v-for="day in days" :key="day.day">
-				<h2>{{ day.day }}</h2>
-				<div v-for="slot in day.slots">
-					<h3>{{ time(slot.from) }} - {{ time(slot.to) }}</h3>
-					<list-card v-for="session of slot.sessions" :key="session.talk.id">
+			<div v-for="[day, slots] in days" :key="day">
+				<h2>{{ day }}</h2>
+				<div v-for="slot in slots">
+					<h3>{{ slot.time.from.format("HH:mm") }} - {{ slot.time.to.format("HH:mm") }}</h3>
+					<list-card v-for="session of sortTalks(slot.sessions)" :key="session.talk.id">
 						<list-card-item>
 							<div>{{ session.talk.title }}</div>
-							<div slot="secondary">{{ session.talk.speakers.map(speaker => speaker.name).join(", ") }}</div>
+							<div slot="secondary">{{ session.talk.speakers.join(", ") }}<br />{{ session.room.roomName }}</div>
 						</list-card-item>
 					</list-card>
 				</div>
@@ -19,24 +19,30 @@
 </template>
 
 <script>
+import groupBy from "lodash/groupBy";
+import sortBy from "lodash/sortBy";
+
+import TimeSlot from "./models/time-slot.js";
+
 import listCard from "./components/list-card.vue";
 import listCardItem from "./components/list-card-item.vue";
 
-import sortBy from "lodash/sortBy";
-import moment from "moment";
 
+const groupByDay = input => {
+	const grouped = groupBy(input, talk => talk.time.from.format("d"));
+	return sortBy(Object.entries(grouped), entry => entry[0])
+		.map(([, talks]) => [talks[0].time.from.format("dddd"), talks]);
+};
 
 const groupByTime = slots => {
-	slots = slots.filter(x => x.talk);
-	const sorted = sortBy(slots, [slot => slot.fromTimeMillis, slot => slot.toTimeMillis]);
+	const sorted = [...slots].sort((a, b) => TimeSlot.compare(a.time, b.time));
 
 	const groups = [];
 
 	for (let slot of sorted) {
-		if (groups.length === 0 || groups[groups.length - 1].from !== slot.fromTimeMillis || groups[groups.length - 1].to !== slot.toTimeMillis) {
+		if (groups.length === 0 || !groups[groups.length - 1].time.equals(slot.time)) {
 			groups.push({
-				from: slot.fromTimeMillis,
-				to: slot.toTimeMillis,
+				time: slot.time,
 				sessions: []
 			});
 		}
@@ -47,48 +53,24 @@ const groupByTime = slots => {
 	return groups;
 };
 
-const getDay = async day => {
-	const response = await fetch(`https://cfp.devoxx.be/api/conferences/DVBE17/schedules/${day}`);
-	if (!response.ok) {
-		throw response;
-	}
-
-	const { slots } = await response.json();
-
-	return groupByTime(slots);
-};
-
 export default {
 	name: "app",
-	data () {
-		return {
-			days: []
-		};
+	computed: {
+		talks() {
+			return this.$store.state.talks;
+		},
+		days() {
+			return groupByDay(this.talks)
+				.map(([day, talks]) => [day, groupByTime(talks)]);
+		}
 	},
 	methods: {
-		time(input) {
-			return moment(input).format("HH:mm");
+		sortTalks(talks) {
+			return sortBy(talks, talk => talk.room.id);
 		}
 	},
 	async mounted() {
-		const [wednesday, thursday, friday] = await Promise.all([
-			getDay("wednesday"), getDay("thursday"), getDay("friday")
-		]);
-
-		this.days.push(...[
-			{
-				day: "Wednesday",
-				slots: wednesday
-			},
-			{
-				day: "Thursday",
-				slots: thursday
-			},
-			{
-				day: "Friday",
-				slots: friday
-			}
-		]);
+		this.$store.dispatch("loadTalks");
 	},
 	components: {
 		listCard,
