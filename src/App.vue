@@ -6,10 +6,10 @@
 				<h2>{{ day }}</h2>
 				<div v-for="slot in slots">
 					<h3>{{ slot.time.from.format("HH:mm") }} - {{ slot.time.to.format("HH:mm") }}</h3>
-					<list-card v-for="session of sortTalks(slot.sessions)" :key="session.talk.id">
+					<list-card v-for="talk of sortTalks(slot.sessions)" :key="talk.id">
 						<list-card-item>
-							<div>{{ session.talk.title }}</div>
-							<div slot="secondary">{{ session.talk.speakers.join(", ") }}<br />{{ session.room.roomName }}</div>
+							<div>{{ talk.title }}</div>
+							<div slot="secondary">{{ talk.speakers.map(speaker => speaker.name).join(", ") }}<br />{{ talk.room.name }}</div>
 						</list-card-item>
 					</list-card>
 				</div>

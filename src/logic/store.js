@@ -1,27 +1,64 @@
+import moment from "moment";
 import Vue from "vue";
 import Vuex from "vuex";
 
+import uniqBy from "lodash/uniqBy";
+
 import * as gateway from "./gateway.js";
+import DB from "./db.js";
 import TimeSlot from "../models/time-slot.js";
 
 Vue.use(Vuex);
 
-const sanitize = slots => slots
+const db = new DB();
+
+const flatten = input => input.reduce((acc, i) => acc.concat(i), []);
+
+const extractRooms = slots => uniqBy(
+	slots.map(slot => ({
+		id: slot.roomId,
+		capacity: slot.roomCapacity,
+		name: slot.roomName,
+		setup: slot.roomSetup
+	})),
+	room => room.id);
+
+const extractSpeakers = slots => uniqBy(
+	flatten(
+		slots.map(slot => slot.talk.speakers
+			.map(speaker => ({
+				id: speaker.link.href.slice(-40),
+				name: speaker.name
+			}))
+		)
+	),
+	speaker => speaker.id
+);
+
+const extractTalks = slots => slots
 	.filter(slot => !!slot.talk)
 	.map(slot => ({
-		id: slot.slotId,
-		time: new TimeSlot(slot.fromTimeMillis, slot.toTimeMillis),
-		room: {
-			id: slot.roomId,
-			roomName: slot.roomName,
-			roomCapacity: slot.roomCapacity
-		},
-		talk: {
-			id: slot.talk.id,
-			title: slot.talk.title,
-			speakers: slot.talk.speakers.map(speaker => speaker.name)
-		}
+		id: slot.talk.id,
+		title: slot.talk.title,
+		speakerIds: slot.talk.speakers.map(speaker => speaker.link.href.slice(-40)),
+		time: { from: moment(slot.fromTimeMillis).toISOString(), to: moment(slot.toTimeMillis).toISOString() },
+		roomId: slot.roomId
 	}));
+
+const groupById = list => list.reduce((acc, i) => Object.assign(acc, { [i.id]: i }), {});
+
+const merge = (rooms, speakers, talks) => {
+	const roomsGrouped = groupById(rooms);
+	const speakersGrouped = groupById(speakers);
+
+	return talks.map(talk => ({
+		id: talk.id,
+		title: talk.title,
+		speakers: talk.speakerIds.map(id => speakersGrouped[id]),
+		room: roomsGrouped[talk.roomId],
+		time: new TimeSlot(talk.time.from, talk.time.to)
+	}));
+};
 
 export default new Vuex.Store({
 	state: {
@@ -35,9 +72,25 @@ export default new Vuex.Store({
 	},
 	actions: {
 		async loadTalks(context) {
-			const [wednesday, thursday, friday] = await Promise.all([gateway.getWednesday(), gateway.getThursday(), gateway.getFriday()]);
-			const all = [...wednesday, ...thursday, ...friday];
-			context.commit("setTalks", sanitize(all));
+			const dataLoaded = await db.getProperty("data_loaded");
+			if (dataLoaded) {
+				const [rooms, speakers, talks] = await Promise.all([
+					db.getRooms(),
+					db.getSpeakers(),
+					db.getTalks()
+				]);
+				context.commit("setTalks", merge(rooms, speakers, talks));
+			} else {
+				const slots = flatten(await Promise.all([gateway.getWednesday(), gateway.getThursday(), gateway.getFriday()]));
+				const rooms = extractRooms(slots);
+				const speakers = extractSpeakers(slots);
+				const talks = extractTalks(slots);
+
+				context.commit("setTalks", merge(rooms, speakers, talks));
+
+				await db.storeData(rooms, speakers, talks);
+				await db.setProperty("data_loaded", true);
+			}
 		}
 	}
 });
