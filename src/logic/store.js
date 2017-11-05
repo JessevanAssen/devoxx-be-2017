@@ -62,12 +62,24 @@ const merge = (rooms, speakers, talks) => {
 
 export default new Vuex.Store({
 	state: {
-		talks: []
+		talks: [],
+		favorites: []
 	},
 	mutations: {
 		setTalks(state, talks) {
 			state.talks.splice(0, state.talks.length);
 			state.talks.push(...talks);
+		},
+		setFavorites(state, favorites) {
+			state.favorites.splice(0, state.favorites.length);
+			state.favorites.push(...favorites);
+		},
+		addFavorite(state, talkId) {
+			state.favorites.push(talkId);
+		},
+		removeFavorite(state, talkId) {
+			const index = state.favorites.indexOf(talkId);
+			state.favorites.splice(index, 1);
 		}
 	},
 	actions: {
@@ -91,6 +103,19 @@ export default new Vuex.Store({
 				await db.storeData(rooms, speakers, talks);
 				await db.setProperty("data_loaded", true);
 			}
+		},
+
+		async loadFavorites(context) {
+			const favorites = await db.getFavorites();
+			context.commit("setFavorites", favorites);
+		},
+		async addFavorite(context, talkId) {
+			context.commit("addFavorite", talkId);
+			db.addFavorite(talkId);
+		},
+		async removeFavorite(context, talkId) {
+			context.commit("removeFavorite", talkId);
+			db.removeFavorite(talkId);
 		}
 	}
 });
